@@ -124,21 +124,22 @@ def sigmoid(x):
 class Brain:
     def __init__(self, sight):
         self.nonlinear = sigmoid
-        self.l00 = [s[0] for s in sight] + [0]
-        self.l01 = [s[1] for s in sight] + [0]
-        self.l02 = [s[2] for s in sight] + [0]
-        self.syn00 = 2*np.random.random((len(sight)+1,5)) - 1
-        self.syn01 = 2*np.random.random((len(sight)+1,5)) - 1
-        self.syn02 = 2*np.random.random((len(sight)+1,5)) - 1
+        #3 layered input, first s inputs are for sight, next for the head position and last one for memory.
+        self.l00 = [s[0] for s in sight] + [0] + [0]
+        self.l01 = [s[1] for s in sight] + [0] + [0]
+        self.l02 = [s[2] for s in sight] + [0] + [0]
+        self.syn00 = 2*np.random.random((len(sight)+2,5)) - 1
+        self.syn01 = 2*np.random.random((len(sight)+2,5)) - 1
+        self.syn02 = 2*np.random.random((len(sight)+2,5)) - 1
         self.l1 = self.nonlinear(np.dot(self.l00, self.syn00) + np.dot(self.l01, self.syn01) + np.dot(self.l02, self.syn02))
-        self.syn1 = 2*np.random.random((5,3)) - 1
+        self.syn1 = 2*np.random.random((5,6)) - 1
         self.l2 = self.nonlinear(np.dot(self.l1, self.syn1))
    
     def update(self, sight, head):
         self.nonlinear = sigmoid
-        self.l00 = [s[0] for s in sight] + [head]
-        self.l01 = [s[1] for s in sight] + [head]
-        self.l02 = [s[2] for s in sight] + [head]
+        self.l00 = [s[0] for s in sight] + [head] + [self.l00[-1]]
+        self.l01 = [s[1] for s in sight] + [head] + [self.l01[-1]]
+        self.l02 = [s[2] for s in sight] + [head] + [self.l02[-1]]
         self.l1 = self.nonlinear(np.dot(self.l00, self.syn00) + np.dot(self.l01, self.syn01) + np.dot(self.l02, self.syn02))
         self.l2 = self.nonlinear(np.dot(self.l1, self.syn1))
         
@@ -258,10 +259,10 @@ def walker_copy(walker):
     cp.angle = random.random() * 2 * math.pi
     cp.set_x(cp.x + random.randint(-10,10))
     cp.set_y(cp.y + random.randint(-10,10))
-    cp.brain.syn00 += (np.random.random((cp.resolution+1,5)) - 0.5) / 5
-    cp.brain.syn01 += (np.random.random((cp.resolution+1,5)) - 0.5) / 5
-    cp.brain.syn02 += (np.random.random((cp.resolution+1,5)) - 0.5) / 5
-    cp.brain.syn1 += (np.random.random((5,3)) - 0.5) / 5
+    cp.brain.syn00 += (np.random.random((cp.resolution+2,5)) - 0.5) / 5
+    cp.brain.syn01 += (np.random.random((cp.resolution+2,5)) - 0.5) / 5
+    cp.brain.syn02 += (np.random.random((cp.resolution+2,5)) - 0.5) / 5
+    cp.brain.syn1 += (np.random.random((5,6)) - 0.5) / 5
     cp.color = pygame.Color("blue")
     return cp
 
@@ -435,6 +436,7 @@ def gameLoop():
                 for p in players:
                     p.health -=  1
                     p.color.b = min(p.health, 255)
+                    p.color = pygame.Color(int(p.brain.l00[-1]*255), int(p.brain.l01[-1]*255), int(p.brain.l02[-1]*255))
                     if p.health <= 0:
                         players.remove(p)
                         cheap_distance_data_structure[p.index].remove(p)
@@ -524,6 +526,9 @@ def gameLoop():
                 p.speed = p.brain.l2[0] * speed
                 p.angular_speed = (p.brain.l2[1] - 0.5) * 2 * angular_speed
                 p.head = (p.brain.l2[2] - 0.5) * 2
+                p.brain.l00[-1] = p.brain.l2[3]
+                p.brain.l01[-1] = p.brain.l2[4]
+                p.brain.l02[-1] = p.brain.l2[5]
             
             
         if view_scene:
